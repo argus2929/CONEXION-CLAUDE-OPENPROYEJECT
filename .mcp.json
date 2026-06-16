@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "openproject": {
+      "command": "node",
+      "args": ["--use-system-ca", "C:/Users/PWGEBKX/Desktop/OPENPROJECT/src/mcp-server.js"]
+    }
+  }
+}

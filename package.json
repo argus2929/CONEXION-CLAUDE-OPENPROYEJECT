@@ -1,0 +1,17 @@
+{
+  "name": "openproject-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Conector y servidor MCP para alimentar avances en OpenProject desde Claude Code",
+  "scripts": {
+    "test:conn": "node --use-system-ca src/test-connection.js",
+    "mcp": "node --use-system-ca src/mcp-server.js",
+    "smoke:mcp": "node --use-system-ca src/smoke-mcp.js",
+    "plantilla": "node --use-system-ca src/generar-plantilla.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
+  }
+}
