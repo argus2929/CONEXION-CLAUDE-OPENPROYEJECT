@@ -129,10 +129,10 @@ export async function listTimeEntries(projectId, { pageSize = 200 } = {}) {
   return data?._embedded?.elements || [];
 }
 
-// Convierte una duración ISO 8601 (PT8H30M) a horas decimales.
+// Convierte una duración ISO 8601 (PT8H30M, P1DT2H) a horas decimales.
 export function isoAHoras(iso) {
-  const m = /PT(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?/.exec(iso || '') || [];
-  return (Number(m[1]) || 0) + (Number(m[2]) || 0) / 60;
+  const m = /P(?:(\d+(?:\.\d+)?)D)?(?:T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?)?/.exec(iso || '') || [];
+  return (Number(m[1]) || 0) * 24 + (Number(m[2]) || 0) + (Number(m[3]) || 0) / 60;
 }
 
 // Convierte horas (número, admite decimales) a duración ISO 8601: 2.5 -> "PT2H30M".
@@ -315,4 +315,80 @@ export async function estadosPermitidos(id) {
   const current = await getWorkPackage(id);
   const form = await getWorkPackageForm(id, { lockVersion: current.lockVersion });
   return estadosPermitidosDesdeForm(form);
+}
+
+// Orden de referencia del flujo de estados (de menor a mayor avance). Se usa para
+// calcular pasos intermedios cuando un tipo no permite el salto directo.
+const ORDEN_FLUJO = [
+  'New', 'In specification', 'Specified', 'Confirmed', 'To be scheduled',
+  'Scheduled', 'In progress', 'Developed', 'In testing', 'Tested', 'Closed',
+];
+
+// Lleva la tarea hasta el estado `destino`, avanzando por estados intermedios si
+// el tipo no permite el salto directo (p. ej. New → Tested pasa por In progress).
+// Devuelve la tarea resumida más `camino` con los estados por los que pasó.
+export async function avanzarHastaEstado(id, destino, { comentario } = {}) {
+  const norm = (s) => String(s || '').trim().toLowerCase();
+  const idxDe = (nombre) => ORDEN_FLUJO.findIndex((n) => norm(n) === norm(nombre));
+  const camino = [];
+
+  for (let paso = 0; paso < ORDEN_FLUJO.length; paso++) {
+    const wp = await getWorkPackage(id);
+    const actual = wp._links?.status?.title;
+    if (norm(actual) === norm(destino)) break;
+
+    const permitidos = await estadosPermitidos(id);
+    if (permitidos.some((s) => coincideEstado(s, destino))) {
+      await aplicarAvance(id, { estado: destino });
+      camino.push(destino);
+      break;
+    }
+
+    // Sin salto directo: tomar el estado permitido más avanzado que quede
+    // entre el actual y el destino, y reintentar desde ahí.
+    const iActual = idxDe(actual);
+    const iDestino = idxDe(destino);
+    const intermedio = iDestino >= 0
+      ? permitidos
+          .map((s) => ({ s, i: idxDe(s.name) }))
+          .filter((c) => c.i > iActual && c.i < iDestino)
+          .sort((a, b) => b.i - a.i)[0]
+      : null;
+    if (!intermedio) {
+      const lista = permitidos.map((s) => s.name).join(', ');
+      throw new Error(`No hay ruta hacia "${destino}" desde "${actual}". Permitidos: ${lista}`);
+    }
+    await aplicarAvance(id, { estado: intermedio.s.name });
+    camino.push(intermedio.s.name);
+  }
+
+  if (comentario) await comentar(id, comentario);
+  const updated = simplifyWP(await getWorkPackage(id));
+  return { ...updated, camino };
+}
+
+// Busca tareas cuyo asunto contenga el texto (opcionalmente dentro de un proyecto).
+export async function buscarTareas(texto, { projectId, pageSize = 50 } = {}) {
+  const filters = [{ subject: { operator: '~', values: [String(texto)] } }];
+  if (projectId) filters.push({ project: { operator: '=', values: [String(projectId)] } });
+  const data = await request(`/work_packages?filters=${filtersParam(filters)}&pageSize=${pageSize}`);
+  return (data?._embedded?.elements || []).map(simplifyWP);
+}
+
+// Resuelve un proyecto por id, identificador o nombre (exacto o parcial).
+export async function resolverProyecto(ref) {
+  const ps = await listProjects();
+  const q = String(ref).trim().toLowerCase();
+  return (
+    ps.find((p) => String(p.id) === q || p.identifier.toLowerCase() === q || p.name.toLowerCase() === q) ||
+    ps.find((p) => p.name.toLowerCase().includes(q)) ||
+    null
+  );
+}
+
+// Resuelve un tipo de tarea por nombre (Feature, Task, Epic...). Default: Feature.
+export async function resolverTipo(nombre = 'Feature') {
+  const tipos = await listTypes();
+  const q = String(nombre).trim().toLowerCase();
+  return tipos.find((t) => t.nombre.toLowerCase() === q) || null;
 }

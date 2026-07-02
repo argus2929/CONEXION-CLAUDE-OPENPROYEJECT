@@ -59,18 +59,26 @@ Stack: **Node** (se construyó con Node 24) + el SDK `@modelcontextprotocol/sdk`
 
 ---
 
-## 5. Herramientas MCP disponibles (6)
+## 5. Herramientas MCP disponibles (11)
 
 | Herramienta | Qué hace |
 |---|---|
 | `op_listar_tareas` | Tus tareas asignadas (estado y %) |
 | `op_ver_tarea` | Detalle de una tarea + estados a los que puede cambiar |
+| `op_tareas_proyecto` | Árbol completo de tareas de un proyecto (clave para mapear un MD de avances) |
+| `op_buscar_tareas` | Busca tareas por texto en el título (evita crear duplicados) |
 | `op_listar_estados` | Estados y el % que representa cada uno (en tu instancia) |
 | `op_listar_proyectos` | Proyectos visibles |
-| `op_actualizar_tarea` | **(escritura)** cambia estado y/o agrega comentario |
+| `op_actualizar_tarea` | **(escritura)** cambia estado (con saltos intermedios automáticos) y/o comenta |
+| `op_crear_tarea` | **(escritura)** crea tarea (proyecto, tipo, padre, descripción, estado inicial, comentario) |
+| `op_editar_descripcion` | **(escritura)** reemplaza la descripción o le anexa una sección |
+| `op_renombrar_tarea` | **(escritura)** cambia el título de una tarea |
 | `op_registrar_tiempo` | **(escritura)** registra horas en una tarea |
 
-> El **conector** sabe hacer más de lo que expone el MCP (crear tareas, editar/renombrar descripciones, editar comentarios, generar plantilla). Esas se usan hoy por **script**; ver "Pendientes".
+> Además, el archivo **`CLAUDE.md`** en la raíz define el flujo conversacional completo
+> (recibir un MD de avances → entrevista → vista previa → aplicar → verificar). Tu Claude
+> lo lee automáticamente al abrir sesión en la carpeta del repo — es la pieza que hace
+> que el sistema sea "hablado" y no de scripts.
 
 ---
 
@@ -96,10 +104,11 @@ Si tu OpenProject es **Enterprise ≥ 17.2**, trae un **MCP nativo** (Administra
 
 ## 8. Pendientes conocidos (de una auditoría interna)
 
-- Faltan herramientas MCP de **escritura**: `crear_tarea`, `editar_descripcion`, `renombrar` (hoy solo por script). Envolverlas es directo (ya existen en `openproject.js`).
-- El **"aplicar plantilla"** lo interpreta Claude a mano; falta un parser automático (`aplicar-seguimiento.js`).
-- **Consolidar** los scripts de un solo uso (hay varios con IDs fijos de la corrida original; revisa antes de re-ejecutar).
-- `isoAHoras` ignora el componente de días en duraciones (no afecta hoy, ninguna entrada supera 24h).
+- ~~Faltan herramientas MCP de escritura: `crear_tarea`, `editar_descripcion`, `renombrar`~~ ✅ Resuelto: ya son herramientas MCP.
+- ~~Falta un motor para aplicar avances en lote~~ ✅ Resuelto: `src/aplicar-plan.js` (plan JSON → vista previa → aplicar).
+- ~~Consolidar los scripts de un solo uso~~ ✅ Resuelto: viven en `src/historicos/` (con IDs fijos; no re-ejecutar).
+- ~~`isoAHoras` ignora el componente de días~~ ✅ Resuelto: ya suma días (`P1DT2H` = 26 h).
+- El flujo de plantilla (`generar-plantilla.js`) sigue siendo manual: Claude interpreta el `.md` llenado. En la práctica el flujo principal es "pásame tu MD" (ver `CLAUDE.md`).
 
 ---
 
@@ -108,13 +117,17 @@ Si tu OpenProject es **Enterprise ≥ 17.2**, trae un **MCP nativo** (Administra
 ```
 src/
   openproject.js        ← Conector (API REST v3). El núcleo.
-  mcp-server.js         ← Servidor MCP (6 herramientas).
+  mcp-server.js         ← Servidor MCP (11 herramientas).
+  aplicar-plan.js       ← Motor de planes JSON: vista previa → aplicar (npm run plan).
   test-connection.js    ← Prueba de conexión (npm run test:conn).
+  smoke-mcp.js          ← Prueba automática del servidor MCP (npm run smoke:mcp).
   arbol.js              ← Árbol de tareas de un proyecto.
   verificar.js          ← Estado/%/comentarios/descripción de tareas.
   verificar-tiempo.js   ← Total de horas registradas.
   generar-plantilla.js  ← Genera el .md de seguimiento por proyecto.
-  (otros scripts de operaciones puntuales — revisar IDs antes de re-correr)
+  probe-wp.js           ← Inspección cruda de un work package (depuración).
+  historicos/           ← Operaciones ya ejecutadas (IDs fijos — NO re-correr sin revisar).
+CLAUDE.md               ← Playbook del flujo conversacional (Claude lo carga solo).
 .env.example            ← Plantilla de configuración (copia a .env).
 .mcp.json               ← Registro del servidor MCP para Claude Code.
 README.md               ← Guía general.

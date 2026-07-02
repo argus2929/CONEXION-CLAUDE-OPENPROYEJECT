@@ -1,3 +1,7 @@
 node_modules/
 .env
 *.log
+
+# Archivos de trabajo del flujo de avances (se generan por corrida, no se versionan)
+seguimiento-*.md
+plan-*.json

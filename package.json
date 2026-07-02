@@ -8,7 +8,8 @@
     "test:conn": "node --use-system-ca src/test-connection.js",
     "mcp": "node --use-system-ca src/mcp-server.js",
     "smoke:mcp": "node --use-system-ca src/smoke-mcp.js",
-    "plantilla": "node --use-system-ca src/generar-plantilla.js"
+    "plantilla": "node --use-system-ca src/generar-plantilla.js",
+    "plan": "node --use-system-ca src/aplicar-plan.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

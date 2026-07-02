@@ -1,16 +1,34 @@
 # OpenProject ⇄ Claude Code
 
-Sistema para alimentar el avance de tareas en OpenProject y generar reportes,
-conversando con Claude Code. Claude lee tu markdown de avances, lo traduce a
-acciones concretas, te muestra una vista previa y, al confirmar, lo sube a OpenProject.
+Sistema para alimentar el avance de tareas en OpenProject conversando con Claude Code.
+**Le pasas tu markdown de avances (o la ruta del archivo), Claude lo entiende, te hace un
+par de preguntas para completar lo que falte, te muestra la vista previa y lo sube.**
+
+## El flujo (así de simple)
+
+```
+Tú:      aquí están mis avances → C:\...\MIS-AVANCES.md
+Claude:  (lee el md, revisa los proyectos y tareas en OpenProject)
+Claude:  ¿A qué estado llevo X? ¿Cuántas horas le metiste a Y? ...   ← entrevista corta
+Claude:  [vista previa: qué tarea se toca, qué estado queda, qué texto se sube]
+Tú:      dale
+Claude:  ✅ sube todo y te muestra la verificación final
+```
+
+El detalle de este flujo vive en [CLAUDE.md](CLAUDE.md) (Claude lo sigue automáticamente
+en cada sesión dentro de esta carpeta).
 
 ## Estado actual
 
 - [x] Conector con la API REST v3 de OpenProject (`src/openproject.js`)
 - [x] Probador de conexión (`npm run test:conn`)
-- [x] Servidor MCP con 6 herramientas (`src/mcp-server.js`)
+- [x] Servidor MCP con **11 herramientas** (`src/mcp-server.js`)
+- [x] Flujo "pásame tu MD" con entrevista + vista previa (ver [CLAUDE.md](CLAUDE.md))
+- [x] Motor de planes: `npm run plan -- plan.json` (vista previa) → `--aplicar`
 - [x] Flujo de plantilla: `npm run plantilla` → llenar → vista previa → subir
 - [x] Registro de tiempo (horas) en tareas
+- [x] Crear tareas, editar descripciones y renombrar desde el chat
+- [x] Avance de estado con saltos automáticos (New → … → Tested sin fallar)
 
 > ¿Vas a adaptar esto a tu propia instancia? Lee **[AKZEL-GUIA.md](AKZEL-GUIA.md)**.
 
@@ -21,19 +39,26 @@ El servidor MCP se registra en `.mcp.json`. Para activarlo:
 1. **Reinicia Claude Code** (cierra y abre la sesión) para que cargue `.mcp.json`.
 2. Cuando pregunte, **aprueba** el servidor `openproject`.
 3. Ya puedes pedirle a Claude cosas como:
+   - "aquí están mis avances: `C:\ruta\a\MIS-AVANCES.md`" ← **el flujo principal**
    - "lista mis tareas de OpenProject"
-   - "muéstrame el detalle de la tarea 1037"
+   - "muéstrame las tareas del proyecto Soporte"
    - "pon la tarea 1037 en Developed con el comentario: terminé el levantamiento"
+   - "crea una tarea 'Asistente IA' en Capital Humano y documéntala con esto: …"
 
-### Herramientas disponibles
+### Herramientas disponibles (11)
 
 | Herramienta | Qué hace |
 |---|---|
 | `op_listar_tareas` | Tus tareas asignadas con estado y % |
 | `op_ver_tarea` | Detalle de una tarea + estados a los que puede cambiar |
+| `op_tareas_proyecto` | Árbol completo de tareas de un proyecto (para mapear avances) |
+| `op_buscar_tareas` | Busca tareas por texto (evita duplicados) |
 | `op_listar_estados` | Estados y el % que representa cada uno |
 | `op_listar_proyectos` | Proyectos visibles |
-| `op_actualizar_tarea` | **(escritura)** cambia estado y/o agrega comentario |
+| `op_actualizar_tarea` | **(escritura)** cambia estado (con saltos automáticos) y/o comenta |
+| `op_crear_tarea` | **(escritura)** crea tarea con descripción, padre, estado y comentario |
+| `op_editar_descripcion` | **(escritura)** reemplaza o amplía la descripción |
+| `op_renombrar_tarea` | **(escritura)** cambia el título |
 | `op_registrar_tiempo` | **(escritura)** registra horas trabajadas (actividad Development por defecto) |
 
 > **Nota clave:** esta instancia calcula el % de avance **por estado** (New=0%, In progress=40%,
@@ -61,9 +86,9 @@ El servidor MCP se registra en `.mcp.json`. Para activarlo:
 
 ## Roadmap ("todo lo que se pueda")
 
-1. **Leer**: mis tareas, por proyecto, por estado; detalle de una tarea.
-2. **Actualizar**: % de avance, comentario, cambio de estado, fechas, registro de tiempo.
-3. **Crear** tareas nuevas desde markdown.
-4. **Flujo markdown**: plantilla con IDs → la llenas → vista previa → subir.
+1. ~~**Leer**: mis tareas, por proyecto, por estado; detalle de una tarea.~~ ✅
+2. ~~**Actualizar**: % de avance, comentario, cambio de estado, registro de tiempo.~~ ✅
+3. ~~**Crear** tareas nuevas desde markdown.~~ ✅
+4. ~~**Flujo markdown**: me pasas tu MD → entrevista → vista previa → subir.~~ ✅
 5. **Reportes**: "qué hice esta semana / este sprint" para tu jefe.
 6. **Seguimiento**: tareas vencidas o próximas a vencer.
