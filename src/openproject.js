@@ -392,3 +392,25 @@ export async function resolverTipo(nombre = 'Feature') {
   const q = String(nombre).trim().toLowerCase();
   return tipos.find((t) => t.nombre.toLowerCase() === q) || null;
 }
+
+// Asigna una tarea a un usuario (id numérico de usuario; usa getMe() para el propio).
+export async function asignarTarea(id, userId) {
+  const current = await getWorkPackage(id);
+  const base = apiPath();
+  const updated = await request(`/work_packages/${id}`, {
+    method: 'PATCH',
+    body: { lockVersion: current.lockVersion, _links: { assignee: { href: `${base}/users/${userId}` } } },
+  });
+  return simplifyWP(updated);
+}
+
+// Actualiza la portada de un proyecto: descripción y/o estado del recuadro
+// (códigos: on_track, at_risk, off_track, not_started, finished, discontinued).
+export async function actualizarProyecto(projectId, { descripcion, estado, explicacion } = {}) {
+  const base = apiPath();
+  const body = {};
+  if (descripcion != null) body.description = { raw: descripcion };
+  if (explicacion != null) body.statusExplanation = { raw: explicacion };
+  if (estado) body._links = { status: { href: `${base}/project_statuses/${estado}` } };
+  return request(`/projects/${projectId}`, { method: 'PATCH', body });
+}
