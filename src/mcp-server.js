@@ -258,13 +258,20 @@ tool(
       descripcion,
     });
     let resumen = `✅ Tarea #${wp.id} creada en "${proj.name}": ${titulo} (${t.nombre})`;
-    if (estado) {
-      const res = await avanzarHastaEstado(wp.id, estado, { comentario });
-      resumen += `\nEstado: ${res.estado} (${res.avance ?? 0}%)`;
-      if (res.camino?.length > 1) resumen += `   ·   Ruta: ${res.camino.join(' → ')}`;
-    } else if (comentario) {
-      await comentar(wp.id, comentario);
-      resumen += '\nComentario agregado.';
+    // La tarea YA existe: si el estado/comentario fallan, hay que reportar el id
+    // igualmente (si no, el cliente reintenta y crea un duplicado).
+    try {
+      if (estado) {
+        const res = await avanzarHastaEstado(wp.id, estado, { comentario });
+        resumen += `\nEstado: ${res.estado} (${res.avance ?? 0}%)`;
+        if (res.camino?.length > 1) resumen += `   ·   Ruta: ${res.camino.join(' → ')}`;
+      } else if (comentario) {
+        await comentar(wp.id, comentario);
+        resumen += '\nComentario agregado.';
+      }
+    } catch (e) {
+      resumen += `\n⚠️ La tarea quedó creada, pero no se pudo completar estado/comentario: ${e.message}\n` +
+        `NO la vuelvas a crear: usa op_actualizar_tarea sobre #${wp.id}.`;
     }
     return texto(resumen);
   }

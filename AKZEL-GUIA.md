@@ -109,6 +109,12 @@ Si tu OpenProject es **Enterprise ≥ 17.2**, trae un **MCP nativo** (Administra
 - ~~Consolidar los scripts de un solo uso~~ ✅ Resuelto: viven en `src/historicos/` (con IDs fijos; no re-ejecutar).
 - ~~`isoAHoras` ignora el componente de días~~ ✅ Resuelto: ya suma días (`P1DT2H` = 26 h).
 - El flujo de plantilla (`generar-plantilla.js`) sigue siendo manual: Claude interpreta el `.md` llenado. En la práctica el flujo principal es "pásame tu MD" (ver `CLAUDE.md`).
+- De una revisión adversaria (jul 2026), pendientes conocidos de `aplicar-plan.js`: la vista previa no
+  garantiza que la RUTA de estados exista para el tipo (puede quedar a medio camino al aplicar y el
+  comentario no se publica); en "crear" no valida el estado inicial; "tiempo" asume la actividad
+  "Development"; y los listados grandes (`op_tareas_proyecto` >200, `op_buscar_tareas` >50) se truncan
+  sin aviso. Mitigación práctica: verificar siempre tras aplicar (paso 7 del flujo) — la verificación
+  final detecta cualquier tarea a medio camino.
 
 ---
 
