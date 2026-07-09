@@ -66,6 +66,20 @@ El servidor MCP se registra en `.mcp.json`. Para activarlo:
 | `git_crear_rama` | **(escritura)** crea la rama `op-<id>-<slug>` de una tarea |
 | `op_git_triangulo` | Cruce OpenProject ⇄ GitLab: situación git de cada tarea + sugerencias |
 
+## 🌐 Desde cualquier proyecto (sin cambiar de ventana)
+
+El sistema no vive solo en esta carpeta:
+
+- El MCP está registrado **a nivel usuario** (`claude mcp list` → `openproject`), así que las 16
+  herramientas existen en **todas** tus sesiones de Claude Code.
+- Hay un **agente global** (`~/.claude/agents/openproject.md`) con el playbook completo
+  (lenguaje de negocio, jerarquía, triángulo, entrevista y vista previa).
+- Atajo: escribe **`/op <lo que necesites>`** en cualquier proyecto:
+  - `/op cierra la tarea 1266, comentario: quedó integrado`
+  - `/op sube estos avances: C:\ruta\AVANCES.md`
+  - `/op cómo va el triángulo de viaticos-2.0`
+  - `/op` (solo) → resumen de tus tareas abiertas
+
 ## 🔺 El triángulo: local ⇄ GitLab ⇄ OpenProject
 
 Cada tarea se trabaja en **su propia rama** (`op-<id-tarea>-<slug>`). GitLab es el **filtro
