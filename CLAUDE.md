@@ -64,6 +64,11 @@ y lo que se fusiona a la rama principal es el **filtro final** ("eso ya está bi
 El id de la tarea de OpenProject en el nombre es lo que une el triángulo.
 
 Flujo por tarea:
+0. **Commits primero (el triángulo empieza en local)**: si la sesión corre dentro del repo del
+   trabajo, checa `git status --short` (sin commitear) y `git log @{u}..HEAD` (sin push). Si hay
+   trabajo local que no está en GitLab, **pregunta al usuario qué subir** (todo / a una rama nueva
+   `op-<id>` / elegir / nada) — Claude nunca decide qué se commitea. Mensaje: `[#<id>] ...`.
+   Solo lo que está en GitLab cuenta como evidencia para mover estados.
 1. **Al arrancar**: `git_crear_rama` (proyecto GitLab + id de tarea) → crea `op-<id>-<slug>`
    y pon la tarea en In progress. El dev la baja con `git fetch && git switch op-<id>-...`.
 2. **Al terminar el desarrollo**: el dev abre un **Merge Request** → la tarea va a In testing (80%).

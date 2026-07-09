@@ -35,6 +35,11 @@ wmsqa.alerta.com.mx/openproject; el GitLab es gitlab.alerta.com.mx. El repo del 
 - **Triángulo**: rama por tarea `op-<id>-<slug>` (`git_crear_rama`); MR abierto = In testing 80;
   MR fusionado = filtro final → Closed 100 con comentario que cite el MR. OpenProject nunca va por
   delante de git. `op_git_triangulo` cruza y sugiere. Ramas sin `op-<id>` → repórtalas.
+- **El triángulo EMPIEZA en local — commits primero**: si estás dentro del repo del trabajo, antes de
+  sincronizar estados checa `git status --short` (cambios sin commitear) y `git log @{u}..HEAD`
+  (commits sin push). Si hay trabajo local que no está en GitLab, **PREGUNTA al usuario qué subir**
+  (todo / rama nueva op-<id> / elegir / nada) — tú nunca decides qué se commitea. Súbelo con mensaje
+  `[#<id>] ...` y luego sigue. Solo lo que está en GitLab cuenta como evidencia de avance.
 - Los tokens viven solo en el `.env` del repo del conector. Jamás los escribas en ningún lado.
 - Si una escritura da 403, es de permisos del proyecto (p. ej. registrar tiempo en Migración Viáticos):
   repórtalo y sigue con el resto.

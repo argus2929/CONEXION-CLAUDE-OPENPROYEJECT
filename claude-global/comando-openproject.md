@@ -3,16 +3,27 @@ description: Modo AUTOMÁTICO — analiza el proyecto actual completo (git, docs
 ---
 
 Ejecuta el pipeline completo de avances en MODO AUTÓNOMO sobre el proyecto actual.
-NO hagas entrevista, NO muestres vista previa, NO esperes confirmación: analiza, decide y sube.
-Al final entrega solo el reporte de verificación. Argumento opcional del usuario (ruta de un .md
-de avances, nombre del proyecto de OpenProject, o instrucciones extra): $ARGUMENTS
+NO hagas entrevista, NO muestres vista previa de OpenProject, NO esperes confirmación: analiza,
+decide y sube. Al final entrega solo el reporte de verificación. SOLO hay 2 preguntas permitidas:
+(a) no poder determinar el proyecto de OpenProject, (b) trabajo local que no está en git (paso 1.5).
+Argumento opcional del usuario (ruta de un .md de avances, nombre del proyecto de OpenProject,
+o instrucciones extra): $ARGUMENTS
 
 ## 1. Reconocimiento local (vea todo)
-- `git remote -v`, rama actual, `git log --oneline -30` y fechas (¿qué se hizo recientemente?),
-  `git status` (trabajo sin commitear = en curso).
+- `git remote -v`, rama actual, `git log --oneline -30` y fechas (¿qué se hizo recientemente?).
 - Lee los documentos de avance del repo si existen: BITACORA.md, CHANGELOG.md, PLAN*.md,
   AVANCES*.md, README.md (sección de estado). Si $ARGUMENTS trae una ruta .md, ese documento manda.
 - Con eso arma la lista de AVANCES: qué se construyó, qué está en curso, qué está bloqueado.
+
+## 1.5 Commits primero — el triángulo EMPIEZA en local (obligatorio)
+El estado en OpenProject nunca va por delante de git, así que primero asegura la esquina local→GitLab:
+- `git status --short` → ¿hay cambios SIN COMMITEAR?
+- `git log @{u}..HEAD --oneline` (o contra la rama remota) → ¿hay commits SIN PUSH?
+- Si hay trabajo local que NO está en GitLab: **PREGUNTA al usuario (AskUserQuestion) qué subir**
+  — nunca decidas tú qué se commitea. Opciones típicas: subir todo a la rama actual / subirlo a una
+  rama nueva `op-<id>-<slug>` de su tarea / elegir qué / no subir nada y documentar solo lo que ya
+  está en GitLab. Ejecuta lo que decida (commit con mensaje `[#<id>] ...` + push) y continúa.
+- Si no hay nada pendiente en local, sigue sin preguntar.
 
 ## 2. Mapeo contra OpenProject (analice todo)
 - `op_listar_proyectos` → deduce el proyecto por el nombre del repo/remote/tema. Si NO puedes
