@@ -78,6 +78,26 @@ Reglas:
 - Ramas sin `op-<id>` en el nombre están fuera del triángulo → repórtalas para que se les cree tarea.
 - El token de GitLab vive en `.env` (`GITLAB_TOKEN`), igual que el de OpenProject. Jamás en archivos versionados.
 
+## JERARQUÍA DE TIPOS — el flujo de trabajo de OpenProject se respeta
+
+Los tipos NO son intercambiables. Cada uno tiene un rol y el trabajo se documenta en las HOJAS:
+
+| Tipo | Rol | Qué lleva |
+|---|---|---|
+| **Epic** | Contenedor mayor (módulo/fase) | Resumen corto del módulo (3-6 líneas). NO el detalle. |
+| **Summary task** | Agrupador intermedio | 1-3 líneas. Se cierra a mano cuando cierran sus hijos. |
+| **Task / Feature / Bug / Support / User story** | **El trabajo real (hoja)** | Descripción completa (Qué se hizo / Lo que se logró / Pendiente), horas, estados finos. |
+
+Reglas:
+1. **El detalle de un avance SIEMPRE va en una hoja.** Si el avance cae en un Epic/Summary task,
+   crea (o encuentra) las tareas HIJAS hoja y documenta ahí; el contenedor recibe solo el resumen.
+2. **Las horas se registran en hojas**, nunca en contenedores.
+3. **Las ramas del triángulo (`op-<id>`) nacen SOLO de tareas hoja.** Un contenedor no tiene rama.
+4. Los contenedores suelen tener **flujo corto** (New → In progress → Closed, sin 70/80/90):
+   otra razón para no documentar el avance fino ahí. Verifica con `op_ver_tarea` qué estados admite.
+5. Jerarquía típica al crear: Epic (módulo) → Summary task (grupo, opcional) → Feature/Task (trabajo).
+   Al crear una hoja bajo un contenedor usa `padre_id`.
+
 ## Reglas del dominio (no negociables)
 
 1. **El % lo determina el ESTADO** (`percentageDone` es de solo lectura):

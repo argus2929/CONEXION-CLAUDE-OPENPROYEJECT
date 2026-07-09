@@ -240,7 +240,8 @@ tool(
     description:
       'ESCRITURA en OpenProject. Crea una tarea (work package) en un proyecto, con descripción en lenguaje de negocio. ' +
       'Opcionalmente la cuelga de una tarea padre, la lleva a un estado inicial y le agrega un comentario de avance. ' +
-      'Antes de crear, considera usar op_buscar_tareas para no duplicar.',
+      'Antes de crear, considera usar op_buscar_tareas para no duplicar. JERARQUÍA: el trabajo real va en tipos HOJA ' +
+      '(Feature, Task, Bug, Support) — Epic y Summary task son solo contenedores/agrupadores (usa padre_id para colgar hojas de ellos).',
     inputSchema: {
       proyecto: z.string().describe('Id, identificador o nombre del proyecto destino.'),
       titulo: z.string().describe('Título de la tarea (claro y sin tecnicismos).'),
@@ -427,6 +428,13 @@ tool(
     const proj = await gitResolverProyecto(proyecto);
     if (!proj) return texto(`❌ No encontré el proyecto GitLab "${proyecto}".`);
     const wp = await getWorkPackage(tarea_id);
+    const tipo = wp._links?.type?.title || '';
+    if (/^(epic|summary task|milestone|phase)$/i.test(tipo)) {
+      return texto(
+        `❌ #${tarea_id} es un ${tipo.toUpperCase()} (contenedor): las ramas del triángulo nacen de tareas HOJA ` +
+          `(Task, Feature, Bug, Support). Busca o crea la tarea hija que corresponda al trabajo (op_tareas_proyecto / op_crear_tarea con padre_id ${tarea_id}) y crea la rama de esa.`
+      );
+    }
     const nombre = `op-${tarea_id}-${slugDeRama(wp.subject)}`;
     const base = desde || proj.rama_principal || 'main';
     await gitCrearRama(proj.id, nombre, base);
