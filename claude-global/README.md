@@ -7,3 +7,5 @@ Para usar el sistema sin estar en esta carpeta:
 2. Copia `agente-openproject.md` a `~/.claude/agents/openproject.md` (ajusta rutas internas).
 3. Copia `comando-op.md` a `~/.claude/commands/op.md`.
 4. Reinicia Claude Code. Desde cualquier proyecto: `/op <lo que necesites>`.
+
+5. (Opcional) Copia `comando-openproject.md` a `~/.claude/commands/openproject.md` — el modo AUTOMÁTICO: `/openproject` analiza el proyecto actual completo y sube todo el avance sin preguntar.
