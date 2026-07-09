@@ -6,6 +6,7 @@
   "description": "Conector y servidor MCP para alimentar avances en OpenProject desde Claude Code",
   "scripts": {
     "test:conn": "node --use-system-ca src/test-connection.js",
+    "test:git": "node --use-system-ca src/test-gitlab.js",
     "mcp": "node --use-system-ca src/mcp-server.js",
     "smoke:mcp": "node --use-system-ca src/smoke-mcp.js",
     "plantilla": "node --use-system-ca src/generar-plantilla.js",

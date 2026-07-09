@@ -59,7 +59,7 @@ Stack: **Node** (se construyó con Node 24) + el SDK `@modelcontextprotocol/sdk`
 
 ---
 
-## 5. Herramientas MCP disponibles (11)
+## 5. Herramientas MCP disponibles (16)
 
 | Herramienta | Qué hace |
 |---|---|
@@ -74,6 +74,16 @@ Stack: **Node** (se construyó con Node 24) + el SDK `@modelcontextprotocol/sdk`
 | `op_editar_descripcion` | **(escritura)** reemplaza la descripción o le anexa una sección |
 | `op_renombrar_tarea` | **(escritura)** cambia el título de una tarea |
 | `op_registrar_tiempo` | **(escritura)** registra horas en una tarea |
+| `git_listar_proyectos` | Proyectos GitLab visibles |
+| `git_ramas` | Ramas de un proyecto GitLab (detecta la convención `op-<id>`) |
+| `git_merge_requests` | Merge requests por estado |
+| `git_crear_rama` | **(escritura)** crea la rama `op-<id>-<slug>` de una tarea |
+| `op_git_triangulo` | Cruce OpenProject ⇄ GitLab con sugerencias de estado |
+
+> Las herramientas `git_*` forman el **triángulo local ⇄ GitLab ⇄ OpenProject**: una rama por
+> tarea (`op-<id>-<slug>`), el merge request como filtro extra y el merge a la principal como
+> filtro final. Config en `.env`: `GITLAB_BASE_URL` + `GITLAB_TOKEN` (scope "api"). Si no usas
+> GitLab, simplemente no configures esas variables — las herramientas de OpenProject no lo necesitan.
 
 > Además, el archivo **`CLAUDE.md`** en la raíz define el flujo conversacional completo
 > (recibir un MD de avances → entrevista → vista previa → aplicar → verificar). Tu Claude
@@ -122,10 +132,12 @@ Si tu OpenProject es **Enterprise ≥ 17.2**, trae un **MCP nativo** (Administra
 
 ```
 src/
-  openproject.js        ← Conector (API REST v3). El núcleo.
-  mcp-server.js         ← Servidor MCP (11 herramientas).
+  openproject.js        ← Conector OpenProject (API REST v3). El núcleo.
+  gitlab.js             ← Conector GitLab (API v4). El triángulo.
+  mcp-server.js         ← Servidor MCP (16 herramientas).
   aplicar-plan.js       ← Motor de planes JSON: vista previa → aplicar (npm run plan).
-  test-connection.js    ← Prueba de conexión (npm run test:conn).
+  test-connection.js    ← Prueba de conexión a OpenProject (npm run test:conn).
+  test-gitlab.js        ← Prueba de conexión a GitLab (npm run test:git).
   smoke-mcp.js          ← Prueba automática del servidor MCP (npm run smoke:mcp).
   arbol.js              ← Árbol de tareas de un proyecto.
   verificar.js          ← Estado/%/comentarios/descripción de tareas.

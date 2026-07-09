@@ -55,6 +55,29 @@ Muestra una tabla: tarea (# o "NUEVA") → proyecto → acción → estado desti
 ### 7. Verifica y reporta
 Relee las tareas tocadas y muestra la tabla final (estado y % reales). Reporta cualquier fallo tal cual.
 
+## EL TRIÁNGULO — local ⇄ GitLab ⇄ OpenProject
+
+GitLab (`gitlab.alerta.com.mx`) es el **filtro extra** del flujo: se trabaja **una rama por tarea**
+y lo que se fusiona a la rama principal es el **filtro final** ("eso ya está bien").
+
+**Convención de ramas: `op-<id-tarea>-<slug>`** — ej. `op-1266-comprobacion-de-gastos`.
+El id de la tarea de OpenProject en el nombre es lo que une el triángulo.
+
+Flujo por tarea:
+1. **Al arrancar**: `git_crear_rama` (proyecto GitLab + id de tarea) → crea `op-<id>-<slug>`
+   y pon la tarea en In progress. El dev la baja con `git fetch && git switch op-<id>-...`.
+2. **Al terminar el desarrollo**: el dev abre un **Merge Request** → la tarea va a In testing (80%).
+3. **Cuando el MR se fusiona** (filtro final pasado) → cerrar la tarea (Closed) con comentario
+   que mencione el MR (ej. "Integrado a la rama principal en !12").
+4. **`op_git_triangulo`** cruza todo (ramas + MRs + estados) y sugiere qué actualizar.
+   Úsalo cuando pidan "sincroniza", "cómo va el triángulo" o al aplicar avances de un proyecto con GitLab.
+
+Reglas:
+- El estado en OpenProject **nunca va por delante de git**: no cierres una tarea cuyo MR no está fusionado
+  (excepción: tareas sin código, p. ej. documentación o sesiones).
+- Ramas sin `op-<id>` en el nombre están fuera del triángulo → repórtalas para que se les cree tarea.
+- El token de GitLab vive en `.env` (`GITLAB_TOKEN`), igual que el de OpenProject. Jamás en archivos versionados.
+
 ## Reglas del dominio (no negociables)
 
 1. **El % lo determina el ESTADO** (`percentageDone` es de solo lectura):

@@ -38,7 +38,17 @@ import {
   comentar,
 } from './openproject.js';
 
-const server = new McpServer({ name: 'openproject', version: '0.2.0' });
+import {
+  gitListProjects,
+  gitResolverProyecto,
+  gitListBranches,
+  gitCrearRama,
+  gitListMergeRequests,
+  gitCruceConTareas,
+  slugDeRama,
+} from './gitlab.js';
+
+const server = new McpServer({ name: 'openproject', version: '0.3.0' });
 
 const texto = (s) => ({ content: [{ type: 'text', text: s }] });
 
@@ -335,6 +345,156 @@ tool(
     const dev = actividades.find((a) => a.nombre.toLowerCase() === 'development');
     await registrarTiempo({ workPackageId: id, horas, fecha, comentario, activityHref: dev?.href });
     return texto(`✅ Registradas ${horas} h en la tarea #${id}${fecha ? ` (${fecha})` : ''}.`);
+  }
+);
+
+// ── Triángulo local ⇄ GitLab ⇄ OpenProject ──────────────────────────────────
+
+tool(
+  'git_listar_proyectos',
+  {
+    title: 'Listar proyectos de GitLab',
+    description: 'Lista los proyectos de GitLab donde eres miembro, con su rama principal y última actividad.',
+    inputSchema: {},
+  },
+  async () => {
+    const ps = await gitListProjects();
+    if (!ps.length) return texto('No hay proyectos visibles en GitLab.');
+    const filas = ps.map((p) => `[${p.id}] ${p.ruta} (rama principal: ${p.rama_principal ?? '—'})`);
+    return texto('Proyectos GitLab:\n' + filas.join('\n'));
+  }
+);
+
+tool(
+  'git_ramas',
+  {
+    title: 'Listar ramas de un proyecto GitLab',
+    description:
+      'Lista las ramas de un proyecto de GitLab, indicando cuáles siguen la convención del triángulo ' +
+      '(op-<id-de-tarea>-<slug>) y si ya están fusionadas a la rama principal.',
+    inputSchema: {
+      proyecto: z.string().describe('Id, ruta (grupo/proyecto) o nombre del proyecto GitLab.'),
+    },
+  },
+  async ({ proyecto }) => {
+    const proj = await gitResolverProyecto(proyecto);
+    if (!proj) return texto(`❌ No encontré el proyecto GitLab "${proyecto}".`);
+    const ramas = await gitListBranches(proj.id);
+    const filas = ramas.map((r) => {
+      const marca = r.fusionada ? '✅ fusionada' : r.protegida ? '🔒 principal' : '🔧 activa';
+      return `${marca}  ${r.nombre}  (últ: ${r.autor ?? '—'} — ${r.mensaje ?? ''})`;
+    });
+    return texto(`Ramas de ${proj.ruta} (${ramas.length}):\n` + filas.join('\n'));
+  }
+);
+
+tool(
+  'git_merge_requests',
+  {
+    title: 'Listar merge requests',
+    description:
+      'Lista los merge requests de un proyecto GitLab (el "filtro extra" del triángulo). ' +
+      'Estados: opened (en revisión), merged (pasó el filtro final), closed (descartado).',
+    inputSchema: {
+      proyecto: z.string().describe('Id, ruta o nombre del proyecto GitLab.'),
+      estado: z.enum(['opened', 'merged', 'closed', 'all']).default('opened').describe('Filtro de estado.'),
+    },
+  },
+  async ({ proyecto, estado }) => {
+    const proj = await gitResolverProyecto(proyecto);
+    if (!proj) return texto(`❌ No encontré el proyecto GitLab "${proyecto}".`);
+    const mrs = await gitListMergeRequests(proj.id, { estado });
+    if (!mrs.length) return texto(`Sin merge requests (${estado}) en ${proj.ruta}.`);
+    const filas = mrs.map((m) => `!${m.iid} [${m.estado}] ${m.rama_origen} → ${m.rama_destino} — ${m.titulo} (${m.autor})`);
+    return texto(`Merge requests de ${proj.ruta} (${estado}):\n` + filas.join('\n'));
+  }
+);
+
+tool(
+  'git_crear_rama',
+  {
+    title: 'Crear rama para una tarea',
+    description:
+      'ESCRITURA en GitLab. Crea la rama de trabajo de una tarea de OpenProject siguiendo la convención ' +
+      'del triángulo: op-<id>-<slug-del-título>. Lee el título real de la tarea en OpenProject.',
+    inputSchema: {
+      proyecto: z.string().describe('Id, ruta o nombre del proyecto GitLab.'),
+      tarea_id: z.number().int().describe('ID de la tarea de OpenProject.'),
+      desde: z.string().optional().describe('Rama base. Por defecto, la rama principal del proyecto.'),
+    },
+  },
+  async ({ proyecto, tarea_id, desde }) => {
+    const proj = await gitResolverProyecto(proyecto);
+    if (!proj) return texto(`❌ No encontré el proyecto GitLab "${proyecto}".`);
+    const wp = await getWorkPackage(tarea_id);
+    const nombre = `op-${tarea_id}-${slugDeRama(wp.subject)}`;
+    const base = desde || proj.rama_principal || 'main';
+    await gitCrearRama(proj.id, nombre, base);
+    return texto(
+      `✅ Rama creada en ${proj.ruta}: ${nombre} (desde ${base})\n` +
+        `Tarea: #${tarea_id} — ${wp.subject}\n` +
+        `Para trabajarla en local:  git fetch && git switch ${nombre}`
+    );
+  }
+);
+
+tool(
+  'op_git_triangulo',
+  {
+    title: 'Cruce OpenProject ⇄ GitLab (triángulo)',
+    description:
+      'Cruza las tareas de OpenProject con las ramas y merge requests de un proyecto GitLab (por la convención ' +
+      'op-<id> en el nombre). Reporta por tarea su situación git — en desarrollo (rama sin MR), en revisión ' +
+      '(MR abierto) o fusionada (pasó el filtro final) — junto al estado en OpenProject, y sugiere qué actualizar. ' +
+      'NO escribe nada: es el reporte para decidir.',
+    inputSchema: {
+      proyecto_git: z.string().describe('Id, ruta o nombre del proyecto GitLab.'),
+      proyecto_op: z.string().optional().describe('Opcional: proyecto OpenProject para traer el estado de cada tarea.'),
+    },
+  },
+  async ({ proyecto_git, proyecto_op }) => {
+    const proj = await gitResolverProyecto(proyecto_git);
+    if (!proj) return texto(`❌ No encontré el proyecto GitLab "${proyecto_git}".`);
+    const cruce = await gitCruceConTareas(proj.id);
+
+    const estadoOP = new Map();
+    if (proyecto_op) {
+      const projOP = await resolverProyecto(proyecto_op);
+      if (projOP) {
+        for (const wp of await projectWorkPackages(projOP.id)) {
+          estadoOP.set(wp.id, { estado: wp._links?.status?.title, avance: wp.percentageDone ?? 0, asunto: wp.subject });
+        }
+      }
+    }
+
+    if (!cruce.tareas.length && !cruce.ramasSinTarea.length) {
+      return texto(
+        `En ${proj.ruta} no hay ramas con la convención op-<id>.\n` +
+          'Para arrancar el triángulo: crea las ramas de trabajo con git_crear_rama (una por tarea).'
+      );
+    }
+
+    const lineas = [`Triángulo ${proj.ruta} ⇄ OpenProject:`, ''];
+    for (const t of cruce.tareas) {
+      const op = estadoOP.get(t.tarea);
+      const icono = t.situacion === 'fusionada' ? '✅' : t.situacion === 'en revisión' ? '👀' : '🔧';
+      lineas.push(`${icono} Tarea #${t.tarea}${op ? ` — ${op.asunto}` : ''}`);
+      lineas.push(`   Git: ${t.situacion} (${t.ramas.map((r) => r.nombre).join(', ') || 'sin rama'}${t.mrs.length ? `; MRs: ${t.mrs.map((m) => `!${m.iid} ${m.estado}`).join(', ')}` : ''})`);
+      if (op) {
+        lineas.push(`   OpenProject: ${op.estado} (${op.avance}%)`);
+        if (t.situacion === 'fusionada' && op.avance < 100)
+          lineas.push('   💡 Sugerencia: pasó el filtro final en git → cerrar la tarea (Closed).');
+        if (t.situacion === 'en revisión' && op.avance < 80)
+          lineas.push('   💡 Sugerencia: está en revisión → In testing (80%).');
+        if (t.situacion === 'en desarrollo' && op.avance < 40)
+          lineas.push('   💡 Sugerencia: hay rama activa → In progress (40%).');
+      }
+      lineas.push('');
+    }
+    if (cruce.ramasSinTarea.length) {
+      lineas.push(`⚠️ Ramas sin tarea asociada (fuera del triángulo): ${cruce.ramasSinTarea.join(', ')}`);
+    }
+    return texto(lineas.join('\n'));
   }
 );
 
